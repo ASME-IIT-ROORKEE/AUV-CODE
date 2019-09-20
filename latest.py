@@ -32,12 +32,7 @@ while(True):
     mask1 = mask1+mask2
     
     image, contours, hierarchy = cv2.findContours(mask1,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-    if len(contours) > 0 :
-        x1,y1,w1,h1 = cv2.boundingRect(contours[0])
-        if (x1 >= 0 and y1>=0 and w1 >=0 and h1>=0 ):
-            cv2.line(frame, (x1+int(w1/2), 200), (x1+int(w1/2), 250),(255,0,0),3)
-            cv2.rectangle(frame,(int(x1),int(y1)),(int(x1+w1), int(y1+h1)),(0,255,255),5)
-    
+   
     cv2.drawContours(frame,contours, -1, (0,255,0), 2)    
         
     cv2.imshow('Original',frame)
