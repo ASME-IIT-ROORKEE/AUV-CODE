@@ -1,14 +1,13 @@
-//Comunication using pyserial for line following
 int prev_err = 0, err, derr;
-int kp = 50;
-int kd = 35;
-int corr;
-int l1=140, r1=140;
+float kp = 0.36;
+float kd = 0.25;
+float corr,err1,err2;
+int l1=130, r1=130;
 int l,r;
 int mrf=24, mrb=25, mlf=22,mlb=23;//mrf = dirction,mrb = break;
 int pwml=11,pwmr=12;
 
-            /**************************************************************************/
+            /**************************/
 
 void setup() {
 Serial.begin(9600);
@@ -21,7 +20,7 @@ pinMode(mlb,OUTPUT);
 
 }
 
-            /***************************************************************************/
+            /*************************/
 
 void forward(){
   digitalWrite(mrf,HIGH);
@@ -51,7 +50,6 @@ void left(){
   analogWrite(pwmr,r);
   analogWrite(pwml,l);
   }
-
 void right(){
   digitalWrite(mrf,LOW);
   digitalWrite(mrb,LOW);
@@ -76,8 +74,9 @@ void calc_pwm(){
   derr = err - prev_err;
   prev_err = err;
   corr = kp*err + kd * derr;
-  Serial.println(err);
-  Serial.println(corr);
+  corr = int(corr);
+  //Serial.println(err);
+  //Serial.println(corr);
   }
 
 void drive(){
@@ -88,10 +87,14 @@ void drive(){
   if(l<0) l=0;
   if(l>254) l=254;
   forward();
-  Serial.println("l=");
-  Serial.print(l);
-  Serial.println("r=");
-  Serial.print(r);
+  Serial.print("corr");
+  Serial.println(corr);
+  Serial.print("l=");
+  Serial.println(l);
+  Serial.print("r=");
+  
+  
+  Serial.println(r);
   }
 
 
@@ -100,16 +103,22 @@ void linefollow(){
   drive();
   }
 
-               /********************************************************************************/
+               /****************************/
 
 void loop() {
   if (Serial.available()){
-  String str;
-  str = Serial.readString();
-  err = str.toInt();
-  err = map(err, -350, 350, -100, 100);
+  String str1;
+  //String str2;
+  str1 = Serial.readString();
+  //str2 = Serial.readString();
+  err = str1.toInt();
+  //err2 = str2.toInt();
+  //err = (err2 * 256)+err1;
+  err = map(err, -640, 0, -100, 100);
   Serial.print("ERROR=");
-  Serial.print(err);
+  Serial.println(err);
   linefollow();
+  Serial.flush();
+  //delay(100);
   }
 }
