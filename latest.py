@@ -1,27 +1,19 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Sep 19 16:50:04 2019
-
-@author: BOBY SINGH
-"""
-
-#video using webcam and communication between pc and arduino using pyserial lib.
 import numpy as np
 import cv2
-import serial
+from serial import Serial
 import time
 
-ArduinoSerial = serial.Serial('com6',9600) #Create Serial port object called arduinoSerialData
+ArduinoSerial = Serial('com4',9600,) #Create Serial port object called arduinoSerialData
 time.sleep(2) #wait for 2 secounds for the communication to get established
 
 print(ArduinoSerial.readline())
 
-
-cap=cv2.VideoCapture(0)
+cap=cv2.VideoCapture(1)
 cap.set(cv2.CAP_PROP_FPS,72)
 w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 print(w,h)
+err=" "
 while(True):
     ret,frame=cap.read()
     img = np.array(frame)
@@ -42,8 +34,9 @@ while(True):
     
     image, contours, hierarchy = cv2.findContours(mask1,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
     areas = [cv2.contourArea(c) for c in contours]
-    max_index= np.argmax(areas)
-    contours1 = contours[max_index]
+    if len(areas) >= 0 :
+        max_index= np.argmax(areas)
+        contours1 = contours[max_index]
     
     
     if len(contours1) > 0 :
@@ -54,9 +47,12 @@ while(True):
             frame =cv2.rectangle(frame,(int(x1),int(y1)),(int(x1+w1), int(y1+h1)),(0,255,255),5)
     
     cv2.drawContours(frame,contours1, -1, (0,255,0), 2) 
-    err = (x1+int(w1/2)) - 320
-    nerr = str(err)
-    ArduinoSerial.write(str.encode(nerr))
+    xerr = (x1+int(w1/2)) - 640
+    err = str(xerr)
+    #nerr = str(err)
+    #print(nerr)
+    ArduinoSerial.write(str.encode(err))
+    
     print(ArduinoSerial.readline())#read the serial data and print it as line 
     time.sleep(.1)
     
