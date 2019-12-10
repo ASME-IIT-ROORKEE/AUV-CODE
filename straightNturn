@@ -1,6 +1,6 @@
 /*     Arduino Rotary Encoder Tutorial
  *      
- *  by Dejan Nedelkovski, www.HowToMechatronics.com
+ *  by ASME
  *  
  */
  #include <Wire.h>
