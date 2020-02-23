@@ -1,0 +1,78 @@
+#include <ping1d.h>
+#include <pingmessage.h>
+#include <pingmessage_all.h>
+#include <pingmessage_ping1D.h>
+#include <ping_parser.h>
+
+#include "ping1d.h"
+#include <Wire.h>
+static const uint8_t arduinoRxPin = 19; //Serial1 rx1
+static const uint8_t arduinoTxPin = 18; //Serial1 tx1
+static const uint8_t arduinoRxPin1 = 17; //Serial1 rx2
+static const uint8_t arduinoTxPin1 = 16; //Serial1 tx2
+
+static Ping1D ping1 { Serial1 };
+static Ping1D ping2 { Serial2 };
+static const uint8_t ledPin = 13;
+
+void setup() {
+  Serial2.begin(9600);
+  Serial1.begin(9600);
+  Serial.begin(9600);
+  pinMode(ledPin, OUTPUT);
+
+  Serial.println("starting sonar");
+  
+  Wire.begin();
+  
+  while (!ping1.initialize()) {
+    Serial.println("\nPing device failed to initialize!");
+    Serial.println("Are the Ping rx/tx wired correctly?");
+    Serial.print("Ping rx is the green wire, and should be connected to Arduino pin ");
+    Serial.print(arduinoTxPin);
+    Serial.println(" (Arduino tx)");
+    Serial.print("Ping tx is the white wire, and should be connected to Arduino pin ");
+    Serial.print(arduinoRxPin);
+    Serial.println(" (Arduino rx)");
+    delay(1000);
+  }
+
+  while (!ping2.initialize()) {
+    Serial.println("\nPing device failed to initialize!");
+    Serial.println("Are the Ping rx/tx wired correctly?");
+    Serial.print("Ping rx is the green wire, and should be connected to Arduino pin ");
+    Serial.print(arduinoTxPin1);
+    Serial.println(" (Arduino tx1)");
+    Serial.print("Ping tx is the white wire, and should be connected to Arduino pin ");
+    Serial.print(arduinoRxPin1);
+    Serial.println(" (Arduino rx1)");
+    delay(1000);
+  }
+}
+
+void loop() {
+  if (ping1.update()) {
+    Serial.print("Front_Sonar: ");
+    Serial.print(ping1.distance());
+    Serial.print(" mm  ");
+//    Serial.print("\tConfidence1: ");
+//    Serial.println(ping1.confidence());
+  } else {
+    Serial.println("No update from front_sonar!");
+  }
+  
+  if (ping2.update()) {
+    Serial.print("side_Sonar: ");
+    Serial.print(ping2.distance());
+    Serial.println(" mm  ");
+//    Serial.print("\tConfidence2: ");
+//    Serial.println(ping2.confidence());
+  } else {
+    Serial.println("No update from side_sonar!");
+  }
+
+  // Toggle the LED to show that the program is running
+  digitalWrite(ledPin, !digitalRead(ledPin));
+  //delay(500);
+  
+}
