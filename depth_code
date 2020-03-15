@@ -1,0 +1,174 @@
+#include <ros.h>
+#include <ros/time.h>
+#include <sensor_msgs/Range.h>
+#include <std_msgs/Int32.h>
+#include <std_msgs/Float32.h>
+#include <Servo.h>
+
+#include <Wire.h>
+#include "MS5837.h"
+MS5837 sensor;
+
+int depth, signalstable_tb, signalstable_tl, signalstable_tr;
+float error1,prev_error1=0,correction1,derivative1;
+float error2,prev_error2=0,correction2,derivative2;
+
+int gati_tb, gati_tr,gati_tl;
+float kp1,kd1,ki1,value;
+float kp2,kd2,ki2,pitch;
+
+byte servoPinRight = 9;
+byte servoPinLeft = 10;
+byte servoPinTopRight = 11;
+byte servoPinTopLeft = 12;
+byte servoPinTopBottom = 13;
+byte servoPinSide = 14;
+ 
+Servo servoRight;
+Servo servoLeft;
+Servo servoTopRight;
+Servo servoTopLeft;
+Servo servoTopBottom;
+Servo servoSide;
+
+ros::NodeHandle nh;
+
+void message(const std_msgs::Float32 &msg)
+{
+  value = msg.data;
+}
+void message1(const std_msgs::Float32 &msg1)
+{
+  kp1 = msg1.data;
+}
+void message2(const std_msgs::Float32 &msg2)
+{
+  kd1 = msg2.data;
+}
+void message3(const std_msgs::Float32 &msg3)
+{
+  ki1 = msg3.data;
+}
+void message4(const std_msgs::Float32 &msg4)
+{
+  pitch = msg4.data;
+}
+void message5(const std_msgs::Float32 &msg5)
+{
+  kp2 = msg5.data;
+}
+void message6(const std_msgs::Float32 &msg6)
+{
+  kd2 = msg6.data;
+}
+void message7(const std_msgs::Float32 &msg7)
+{
+  ki2 = msg7.data;
+}
+ 
+ros::Subscriber<std_msgs::Float32> sub1("SetPoint_depth", &message);
+ros::Subscriber<std_msgs::Float32> sub2("Kp1", &message1);
+ros::Subscriber<std_msgs::Float32> sub3("Kd1", &message2);
+ros::Subscriber<std_msgs::Float32> sub4("Ki1", &message3);
+ros::Subscriber<std_msgs::Float32> sub5("pitch_value", &message4);
+ros::Subscriber<std_msgs::Float32> sub6("Kp2", &message5);
+ros::Subscriber<std_msgs::Float32> sub7("Kd2", &message6);
+ros::Subscriber<std_msgs::Float32> sub8("Ki2", &message7);
+ 
+void setup() {
+  nh.initNode();
+  nh.subscribe(sub1);  
+  nh.subscribe(sub2);  
+  nh.subscribe(sub3);  
+  nh.subscribe(sub4); 
+  nh.subscribe(sub5);  
+  nh.subscribe(sub6);  
+  nh.subscribe(sub7);  
+  nh.subscribe(sub8); 
+
+  servoRight.attach(servoPinRight);
+  servoLeft.attach(servoPinLeft);
+  servoTopRight.attach(servoPinTopRight);
+  servoTopLeft.attach(servoPinTopLeft);
+  servoTopBottom.attach(servoPinTopBottom);
+  servoSide.attach(servoPinSide);
+ 
+  servoRight.writeMicroseconds(1500); // send "stop" signal to ESC.</p>
+  servoLeft.writeMicroseconds(1500);
+  servoTopRight.writeMicroseconds(1500);
+  servoTopLeft.writeMicroseconds(1500);
+  servoTopBottom.writeMicroseconds(1500);
+  servoSide.writeMicroseconds(1500);
+  delay(7000); // delay to allow the ESC to recognize the stopped signal<br />
+ 
+  Wire.begin();
+ 
+  while (!sensor.init()) {
+    Serial.println("Init failed!");
+    delay(1000);
+  }
+  sensor.setModel(MS5837::MS5837_30BA);
+  sensor.setFluidDensity(997);
+}
+ 
+void loop() {
+ sensor.read();
+ depth=(sensor.depth())*100;
+ Serial.println(depth); 
+ 
+ calculate_pid();
+ balance();
+ nh.spinOnce();
+}
+
+
+                  ///////**********************************//////////
+
+                  
+void balance(){   
+  if(depth < (value - 10)){
+    chalna1();
+  }
+  else{
+    chalna2();
+  }
+}
+ 
+void calculate_pid(){
+error1 = (sensor.depth()*100) - value; 
+derivative1 = error1 - prev_error1;
+correction1 = (kp1*error1)+(kd1*derivative1);
+prev_error1 = error1;
+
+error2 = pitch - 0.0; 
+derivative2 = error2 - prev_error2;
+correction2 = (kp2*error2)+(kd2*derivative2);
+prev_error2 = error2;
+}
+
+void chalna2(){
+  if(correction1<0 | correction2<0){
+  gati_tb = map(correction1-correction2, -1,0,1200,signalstable_tb);
+  gati_tl = map(correction1+correction2, -1,0,1800,signalstable_tl);
+  gati_tr = map(correction1+correction2, -1,0,1800,signalstable_tr);
+  }
+  
+  else{
+   gati_tb = signalstable_tb;
+   gati_tl = signalstable_tl;
+   gati_tr = signalstable_tr;
+  }
+ servoTopRight.writeMicroseconds(gati_tr);
+ servoTopLeft.writeMicroseconds(gati_tl);
+ servoTopBottom.writeMicroseconds(gati_tb);
+}
+
+void chalna1(){
+   gati_tb = signalstable_tb;
+   gati_tl = signalstable_tl;
+   gati_tr = signalstable_tr;
+
+   servoTopRight.writeMicroseconds(gati_tr);
+   servoTopLeft.writeMicroseconds(gati_tl);
+   servoTopBottom.writeMicroseconds(gati_tb);
+}
