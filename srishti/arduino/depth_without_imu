@@ -1,0 +1,165 @@
+#include <ros.h>
+#include <ros/time.h>
+#include <sensor_msgs/Range.h>
+#include <std_msgs/Int32.h>
+#include <std_msgs/Float32.h>
+#include <Servo.h>
+
+#include <Wire.h>
+#include "MS5837.h"
+
+MS5837 sensor;
+
+int depth;
+float error, prev_error=0, correction, derivative;
+
+int gati_tb, gati_tr,gati_tl;
+
+byte servoPinRight = 2;
+byte servoPinLeft = 3;
+byte servoPinTopRight = 4;
+byte servoPinTopLeft = 5;
+byte servoPinTopBottom = 6;
+byte servoPinSide = 7;
+ 
+Servo servoRight;
+Servo servoLeft;
+Servo servoTopRight;
+Servo servoTopLeft;
+Servo servoTopBottom;
+Servo servoSide;
+/*
+ros::NodeHandle nh;
+
+void message(const std_msgs::Int32 &msg)
+{
+  value = msg.data;
+}
+void message1(const std_msgs::Float32 &msg1)
+{
+  kp = msg1.data;
+}
+void message2(const std_msgs::Float32 &msg2)
+{
+  kd = msg2.data;
+}
+void message3(const std_msgs::Float32 &msg3)
+{
+  ki = msg3.data;
+}
+ 
+ros::Subscriber<std_msgs::Int32> sub1("SetPoint_depth", &message);
+ros::Subscriber<std_msgs::Float32> sub2("Kp", &message1);
+ros::Subscriber<std_msgs::Float32> sub3("Kd", &message2);
+ros::Subscriber<std_msgs::Float32> sub4("Ki", &message3);
+
+std_msgs::Int32 depth_c;
+ros::Publisher pub1("/depth_c", &depth_c);
+
+*/
+int kp=8;
+int kd=5;
+int value =25;
+void setup() {
+  Serial.begin(9600);
+  /*
+  nh.initNode();
+  nh.subscribe(sub1);  
+  nh.subscribe(sub2);  
+  nh.subscribe(sub3);  
+  nh.subscribe(sub4); 
+  nh.advertise(pub1);*/
+  servoRight.attach(servoPinRight);
+  servoLeft.attach(servoPinLeft);
+  servoTopRight.attach(servoPinTopRight);
+  servoTopLeft.attach(servoPinTopLeft);
+  servoTopBottom.attach(servoPinTopBottom);
+  servoSide.attach(servoPinSide);
+ 
+  servoRight.writeMicroseconds(1500); // send "stop" signal to ESC.</p>
+  servoLeft.writeMicroseconds(1500);
+  servoTopRight.writeMicroseconds(1500);
+  servoTopLeft.writeMicroseconds(1500);
+  servoTopBottom.writeMicroseconds(1500);
+  servoSide.writeMicroseconds(1500);
+  delay(7000); // delay to allow the ESC to recognize the stopped signal<br />
+
+  Wire.begin();
+ 
+  while (!sensor.init()) {
+    Serial.println("Init failed!");
+    delay(1000);
+  }
+  sensor.setModel(MS5837::MS5837_30BA);
+  sensor.setFluidDensity(997); 
+}
+ 
+void loop() {
+ sensor.read();
+ depth = 23 + (sensor.depth()*100);
+//depth_c.data = value;
+ //pub1.publish( &depth_c);
+ Serial.println(depth); 
+ 
+ 
+ balance();
+ 
+ //nh.spinOnce();
+ 
+}
+
+
+                  ///////**********************************//////////
+
+                  
+void balance(){   
+  if(depth < (value - 5) ){
+    chalna1();
+  }
+  else if (depth > (value + 5)){
+    chalna3();
+  }
+  else chalna2();
+}
+ 
+void calculate_pid(){
+  
+error = depth - value; 
+derivative = error - prev_error;
+correction = (kp*error)+(kd*derivative);
+prev_error = error;
+ 
+}
+
+void chalna2(){
+  calculate_pid();
+  gati_tl = map(correction, -100,100,1445,1465);
+  gati_tb = map(correction, -100,100,1555,1535);
+  gati_tr = map(correction, -100,100,1555,1535);
+  Serial.print("corr");
+  Serial.println(correction);
+  servoTopRight.writeMicroseconds(gati_tr);
+  servoTopLeft.writeMicroseconds(gati_tl);
+  servoTopBottom.writeMicroseconds(gati_tb);
+}
+
+void chalna1(){
+ Serial.println("chalna1");
+   gati_tl = 1410;
+   gati_tb = 1595;
+   gati_tr = 1595;
+
+   servoTopRight.writeMicroseconds(gati_tr);
+   servoTopLeft.writeMicroseconds(gati_tl);
+   servoTopBottom.writeMicroseconds(gati_tb);
+}
+void chalna3(){
+  Serial.println("chalna3");
+   gati_tl = 1595;
+   gati_tb = 1410;
+   gati_tr = 1410;
+
+   servoTopRight.writeMicroseconds(gati_tr);
+   servoTopLeft.writeMicroseconds(gati_tl);
+   servoTopBottom.writeMicroseconds(gati_tb);
+}
